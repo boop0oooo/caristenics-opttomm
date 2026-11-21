@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>キャリステニクス専用トレーニング管理アプリ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    /* カスタムスクロールバーとスムーズなトランジション */
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .tab-scroll::-webkit-scrollbar {
+      height: 6px;
+    }
+    .tab-scroll::-webkit-scrollbar-thumb {
+      background-color: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
+  <!-- アプリケーションルート -->
+  <div id="app" class="min-h-screen flex flex-col">
+    <!-- ヘッダー -->
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 flex items-center justify-center font-extrabold text-lg shadow-sm">
+            60
+          </div>
+          <div>
+            <h1 class="text-base sm:text-xl font-extrabold tracking-tight">
+              キャリステニクス専用トレーニング管理
+            </h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              BIG6 各10ステップ（全60種目）完全対応ワークアウト＆進捗トラッカー
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- 全体達成率バッジ -->
+          <div id="overallProgressBadge" class="px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-xs sm:text-sm font-semibold text-amber-800 dark:text-amber-300">
+            マスター: <span id="masteredCountText">0</span> / 60
+          </div>
+
+          <!-- ダークモード切替 -->
+          <button
+            id="themeToggleBtn"
+            type="button"
+            class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
+            aria-label="テーマ切替"
+          >
+            <span id="themeIcon">🌙</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- モード切替＆シリーズタブ -->
+      <nav class="max-w-6xl mx-auto px-4 sm:px-6 pb-2.5 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <div class="flex flex-wrap gap-2">
+            <button
+              id="viewTodayBtn"
+              type="button"
+              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-slate-950 shadow-sm"
+            >
+              🔥 今日のメニュー
+            </button>
+            <button
+              id="viewCalendarBtn"
+              type="button"
+              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+            >
+              📅 カレンダー
+            </button>
+            <button
+              id="viewScheduleBtn"
+              type="button"
+              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+            >
+              ⚙️ 曜日スケジュール設定
+            </button>
+            <button
+              id="viewLibraryBtn"
+              type="button"
+              class="px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+            >
+              📚 全60種目一覧
+            </button>
+          </div>
+          <div id="todayRecommendBanner" class="text-xs font-semibold text-slate-600 dark:text-slate-300"></div>
+        </div>
+        <div id="seriesTabs" class="hidden flex gap-2 overflow-x-auto tab-scroll py-1"></div>
+      </nav>
+    </header>
+
+    <!-- 今日のメニュー専用セクション（トップページ） -->
+    <section id="todayMenuSection" class="max-w-4xl w-full mx-auto px-4 sm:px-6 pt-6 space-y-4">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border-2 border-amber-400/70 dark:border-amber-500/50 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <span id="selectedDateLabel" class="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400"></span>
+            <h2 class="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">🔥 本日の最適ワークアウトメニュー</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="selectedDayOfWeekBadge" class="px-3 py-1 rounded-xl text-xs font-extrabold bg-slate-100 dark:bg-slate-800"></span>
+            <button
+              id="resetToRealTodayBtn"
+              type="button"
+              class="hidden px-3 py-1 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-extrabold hover:bg-amber-200 transition cursor-pointer"
+            >
+              今日の日付に戻す
+            </button>
+          </div>
+        </div>
+
+        <div id="dayOptimalMenuContainer" class="space-y-3"></div>
+
+        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs text-slate-500 dark:text-slate-400">別の日程の確認や曜日設定の調整はこちら</span>
+          <div class="flex items-center gap-2">
+            <button
+              id="jumpToCalendarBtn"
+              type="button"
+              class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition cursor-pointer"
+            >
+              📅 カレンダーを見る
+            </button>
+            <button
+              id="jumpToScheduleBtn"
+              type="button"
+              class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition cursor-pointer"
+            >
+              ⚙️ 曜日設定を開く
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- カレンダー専用セクション（別タブ） -->
+    <section id="calendarOnlySection" class="hidden max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="calendarMonthTitle" class="text-lg sm:text-xl font-extrabold tracking-tight"></h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              日付をタップすると、その日のメニュー画面へ切り替わります（緑の点は記録済みの日）
+            </p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="prevMonthBtn" type="button" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition cursor-pointer">◀ 前月</button>
+            <button id="todayDateBtn" type="button" class="px-3.5 py-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 hover:bg-amber-200 text-xs font-extrabold transition cursor-pointer">今日へ移動</button>
+            <button id="nextMonthBtn" type="button" class="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition cursor-pointer">翌月 ▶</button>
+          </div>
+        </div>
+
+        <!-- 曜日ヘッダー -->
+        <div class="grid grid-cols-7 text-center text-xs font-extrabold text-slate-500 dark:text-slate-400 pb-1.5 border-b border-slate-100 dark:border-slate-800">
+          <div class="text-rose-500">日</div>
+          <div>月</div>
+          <div>火</div>
+          <div>水</div>
+          <div>木</div>
+          <div>金</div>
+          <div class="text-sky-500">土</div>
+        </div>
+
+        <!-- 日付グリッド -->
+        <div id="calendarGrid" class="grid grid-cols-7 gap-2"></div>
+      </div>
+    </section>
+
+    <!-- 曜日スケジュール専用設定画面（別画面タブ） -->
+    <section id="weekdayConfigSection" class="hidden max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 space-y-5">
+      <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div>
+            <h2 class="text-lg sm:text-xl font-extrabold tracking-tight">⚙️ 曜日ごとの担当カテゴリー設定</h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              各曜日に実施するカテゴリーを選択してください（複数選択可・すべて外すと休息日になります）
+            </p>
+          </div>
+          <button
+            id="backToTodayBtn"
+            type="button"
+            class="px-4 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 text-xs sm:text-sm font-extrabold hover:opacity-90 transition cursor-pointer"
+          >
+            ✓ 設定を完了して今日のメニューへ戻る
+          </button>
+        </div>
+
+        <div id="weekdayConfigList" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- メインコンテンツ（種目詳細・記録＆全60種目一覧） -->
+    <main id="workoutMainSection" class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- 左カラム：タイマー＆ステップ一覧（4列） -->
+      <aside id="leftSidebarColumn" class="lg:col-span-4 space-y-5">
+        <!-- インターバル・ホールド計測タイマー -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              ⏱ ホールド / 休憩タイマー
+            </h3>
+            <span class="text-[11px] text-slate-400">逆立ち・インターバル用</span>
+          </div>
+          <div id="timerDisplay" class="text-2xl sm:text-3xl font-extrabold font-mono text-center py-2 rounded-xl bg-slate-50 dark:bg-slate-800/70 tracking-wider">
+            00:00.0
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <button id="timerStartBtn" type="button" class="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition cursor-pointer">開始</button>
+            <button id="timerStopBtn" type="button" class="py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold transition cursor-pointer">一時停止</button>
+            <button id="timerResetBtn" type="button" class="py-2 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-xs font-bold transition cursor-pointer">リセット</button>
+          </div>
+        </div>
+
+        <!-- 選択中シリーズの10ステップ一覧 -->
+        <div id="stepListCard" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 id="currentSeriesTitle" class="text-sm font-extrabold">プッシュアップ（10ステップ）</h2>
+            <span id="seriesProgressLabel" class="text-xs font-bold text-amber-600 dark:text-amber-400">0 / 10 達成</span>
+          </div>
+          <div id="stepList" class="space-y-1.5 max-h-[540px] overflow-y-auto pr-1"></div>
+        </div>
+      </aside>
+
+      <!-- 右カラム：選択ステップ詳細・トレーニングゴール・記録（8列） -->
+      <section class="lg:col-span-8 space-y-6">
+        <!-- ステップ詳細カード -->
+        <article id="exerciseDetailCard" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-5">
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div>
+              <div class="flex flex-wrap items-center gap-2 mb-1.5">
+                <span id="stepBadge" class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950">
+                  STEP 1
+                </span>
+                <span id="masterBadge" class="hidden px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                  THE MASTER STEP
+                </span>
+                <span id="statusBadge" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  未達成
+                </span>
+              </div>
+              <h2 id="exerciseName" class="text-xl sm:text-2xl font-extrabold tracking-tight"></h2>
+              <p id="exerciseEnName" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5"></p>
+            </div>
+
+            <button
+              id="toggleMasteredBtn"
+              type="button"
+              class="py-2.5 px-4 rounded-xl font-bold text-sm border transition cursor-pointer"
+            >
+              クリア切替
+            </button>
+          </div>
+
+          <!-- トレーニング・ゴール（初心者 / 中級者 / 上級者） -->
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+              トレーニング・ゴール基準
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">初心者の標準</div>
+                <div id="goalBeginner" class="text-base sm:text-lg font-extrabold mt-1 text-slate-900 dark:text-white"></div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80">
+                <div class="text-xs font-semibold text-blue-600 dark:text-blue-400">中級者の標準</div>
+                <div id="goalIntermediate" class="text-base sm:text-lg font-extrabold mt-1 text-slate-900 dark:text-white"></div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60">
+                <div class="text-xs font-semibold text-amber-700 dark:text-amber-400">上級者の標準</div>
+                <div id="goalAdvanced" class="text-base sm:text-lg font-extrabold mt-1 text-slate-900 dark:text-white"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- やり方 -->
+          <div>
+            <h3 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-1.5">📋 やり方</h3>
+            <p id="exerciseHowTo" class="text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line"></p>
+          </div>
+
+          <!-- 技術を完璧にするポイント -->
+          <div class="p-4 rounded-xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200/70 dark:border-sky-800/50">
+            <h3 class="text-sm font-bold text-sky-900 dark:text-sky-300 mb-1">🎯 技術を完璧にするポイント</h3>
+            <p id="exerciseTip" class="text-sm leading-relaxed text-sky-800 dark:text-sky-200"></p>
+          </div>
+        </article>
+
+        <!-- ワークアウト記録カード -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-extrabold">📝 このステップのトレーニング記録</h3>
+            <span id="logCountLabel" class="text-xs font-semibold text-slate-500 dark:text-slate-400"></span>
+          </div>
+
+          <form id="workoutLogForm" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div class="sm:col-span-3">
+              <label id="logPrimaryLabel" for="logPrimaryValue" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                レップ数（回）
+              </label>
+              <input
+                id="logPrimaryValue"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                step="1"
+                required
+                placeholder="例: 15"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            <div class="sm:col-span-3">
+              <label id="logSecondaryLabel" for="logSecondaryValue" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                セット数
+              </label>
+              <input
+                id="logSecondaryValue"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                step="1"
+                required
+                value="1"
+                placeholder="例: 2"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            <div class="sm:col-span-4">
+              <label for="logMemo" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                フォーム・気づきメモ
+              </label>
+              <input
+                id="logMemo"
+                type="text"
+                placeholder="例: 肘を体側に寄せて意識できた"
+                class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            <div class="sm:col-span-2 flex items-end">
+              <button
+                type="submit"
+                class="w-full py-2 px-3 rounded-xl bg-slate-900 dark:bg-amber-500 hover:bg-slate-800 dark:hover:bg-amber-400 text-white dark:text-slate-950 font-bold text-sm transition cursor-pointer"
+              >
+                記録を追加
+              </button>
+            </div>
+          </form>
+
+          <!-- メッセージ通知領域（alert代替） -->
+          <div id="statusMessageBox" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+
+          <!-- 記録リスト -->
+          <div id="workoutLogsList" class="divide-y divide-slate-100 dark:divide-slate-800"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const SERIES_DATA = [
+      {
+        id: 'pushup',
+        name: 'プッシュアップ',
+        enName: 'Push-ups',
+        steps: [
+          {
+            step: 1,
+            name: 'ウォール・プッシュアップ',
+            enName: 'Wall Push-up',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '50レップス×3' },
+            howTo: '壁に向かい合って足を揃えて立ち、肩幅に開いた手のひらを胸の高さで壁につく。肘を曲げて額が壁に軽く触れるまで体を近づけ、ゆっくり押し戻す。',
+            tip: '関節と腱を慣らす導入ステップ。反動を使わず、体幹をまっすぐ保ったままコントロールして動作する。'
+          },
+          {
+            step: 2,
+            name: 'インクライン・プッシュアップ',
+            enName: 'Incline Push-up',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '40レップス×3' },
+            howTo: '腰ほどの高さの頑丈なテーブルやベンチの端に肩幅で手を置き、足を後ろに引いて体を一直線にする。胸が台に触れるまで下ろし、押し上げる。',
+            tip: '腰が反ったりお尻が上がったりしないよう、頭からかかとまで一直線を維持する。'
+          },
+          {
+            step: 3,
+            name: 'ニーリング・プッシュアップ',
+            enName: 'Kneeling Push-up',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '30レップス×3' },
+            howTo: '床に膝をつき、両足を揃えてかかとを浮かせる。肩の真下に肩幅で手を置き、胸が床から握りこぶし1つ分になるまで下ろして押し上げる。',
+            tip: '股関節を曲げず、膝から頭まで一直線のラインを保ちながら動作する。'
+          },
+          {
+            step: 4,
+            name: 'ハーフ・プッシュアップ',
+            enName: 'Half Push-up',
+            goal: { beginner: '8レップス×1', intermediate: '15レップス×2', advanced: '25レップス×2' },
+            howTo: '通常の腕立て伏せの姿勢（プランク姿勢）をとり、肘が約90度になる位置（可動域の半分）まで体を下ろし、一時静止してから押し上げる。',
+            tip: 'フル可動域に入る前に、体幹を一直線に保ったまま全体重を支える基礎筋力を養う。'
+          },
+          {
+            step: 5,
+            name: 'フル・プッシュアップ',
+            enName: 'Full Push-up',
+            goal: { beginner: '5レップス×1', intermediate: '10レップス×2', advanced: '20レップス×2' },
+            howTo: '足を揃えて体を一直線にし、肩の真下に肩幅で手を置く。胸が床から握りこぶし1つ分の高さになるまで下ろし、1秒静止して肘が伸び切るまで押し上げる。',
+            tip: '脇を開きすぎず、肘をやや体側に寄せて下ろすことで肩関節を保護し大胸筋・三頭筋を効果的に鍛える。'
+          },
+          {
+            step: 6,
+            name: 'クローズ・プッシュアップ',
+            enName: 'Close Push-up',
+            goal: { beginner: '5レップス×1', intermediate: '10レップス×2', advanced: '20レップス×2' },
+            howTo: '腕立て伏せの姿勢で、両手の親指と人差し指が触れ合う（ダイヤモンド形になる）位置に手を置く。胸が手の甲に触れるまで下ろし、押し上げる。',
+            tip: '肘と上腕三頭筋への負荷が大きく高まる。手幅を少しずつ狭めながら段階的に慣らしていく。'
+          },
+          {
+            step: 7,
+            name: 'アンイーブン・プッシュアップ',
+            enName: 'Uneven Push-up',
+            goal: { beginner: '5レップス×1（左右各）', intermediate: '10レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片手を床につき、もう片方の手をバスケットボールの上に乗せて腕立て伏せの姿勢をとる。胸が床の手に近づくまで下ろし、押し上げる。',
+            tip: 'ボール上の手で体を支えつつ、床についた側の腕により多くの体重を乗せて片腕動作へ移行する準備をする。'
+          },
+          {
+            step: 8,
+            name: 'ハーフ・ワンアーム・プッシュアップ',
+            enName: 'Half One-Arm Push-up',
+            goal: { beginner: '5レップス×1（左右各）', intermediate: '10レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '足を肩幅よりやや広く開いてバランスをとり、片手を背中に回す。もう片方の手を胸の真下に置き、肘が約90度になる半分まで下ろして押し上げる。',
+            tip: '体が横にねじれないよう腹筋と臀部を強く締め、肩をすくめずに押し切る。'
+          },
+          {
+            step: 9,
+            name: 'レバー・プッシュアップ',
+            enName: 'Lever Push-up',
+            goal: { beginner: '5レップス×1（左右各）', intermediate: '10レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片手を胸の下に置き、もう片方の腕を体の横にまっすぐ伸ばして指先（またはバスケットボールの上）で軽く補助しながら、胸が床につくまで下ろして押し上げる。',
+            tip: '伸ばした腕の補助を最小限にとどめ、ボトムポジションから抜け出す力を養う。'
+          },
+          {
+            step: 10,
+            name: 'ワンアーム・プッシュアップ',
+            enName: 'One-Arm Push-up',
+            goal: { beginner: '5レップス×1（左右各）', intermediate: '10レップス×2（左右各）', advanced: '100レップス×1（左右各）' },
+            howTo: '片手を背中に回し、もう片方の手を胸の真下の床に置く。体をまっすぐ保ったまま顎または胸が床から握りこぶし1つ分になるまで下ろし、1秒静止して押し上げる。',
+            tip: '最初は足幅を広めにとって体の回転を防ぎ、習得が進むにつれて徐々に足幅を狭めていく。'
+          }
+        ]
+      },
+      {
+        id: 'squat',
+        name: 'スクワット',
+        enName: 'Squats',
+        steps: [
+          {
+            step: 1,
+            name: 'ショルダースタンド・スクワット',
+            enName: 'Shoulderstand Squat',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '50レップス×3' },
+            howTo: '床に仰向けになり、腰を両手で支えて脚を天井に向けて伸ばす。膝を曲げて胸に近づけ、再び脚をまっすぐ上に伸ばす動作を繰り返す。',
+            tip: '首に過度の重さがかからないよう肩と上腕で支える。脚の上げ下ろしをコントロールする。'
+          },
+          {
+            step: 2,
+            name: 'ジャックナイフ・スクワット',
+            enName: 'Jackknife Squat',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '40レップス×3' },
+            howTo: '椅子や低い台の少し前に立ち、両手で台をつかんで体重の一部を支えながら、片脚を前に伸ばしたままもう片方の脚でしゃがみ、立ち上がる。',
+            tip: '手で引き上げすぎず、支えている脚の太ももとお尻の筋力をメインに使う。'
+          },
+          {
+            step: 3,
+            name: 'サポーテッド・スクワット',
+            enName: 'Supported Squat',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '30レップス×3' },
+            howTo: 'ドア枠や柱、手すりなどを軽く持ち、足を肩幅に開いて深くしゃがみ込み、かかとで床を押して立ち上がる。',
+            tip: '手はあくまでバランス補助にとどめ、深くしゃがみ込む股関節と足首の柔軟性を養う。'
+          },
+          {
+            step: 4,
+            name: 'ハーフ・スクワット',
+            enName: 'Half Squat',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '50レップス×2' },
+            howTo: '足を肩幅に開き、背筋を伸ばしたままお尻を後ろに引いて太ももが床と平行になる手前（約半分）までしゃがみ、立ち上がる。',
+            tip: '膝がつま先より極端に前に出ないよう意識し、お尻と太ももにしっかり負荷をかける。'
+          },
+          {
+            step: 5,
+            name: 'フル・スクワット',
+            enName: 'Full Squat',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '30レップス×2' },
+            howTo: '足を肩幅程度に開き、ふくらはぎとお尻が接するほど深くしゃがみ込み、一時静止してからかかと全体で床を押して立ち上がる。',
+            tip: 'かかとが浮かないように重心を安定させ、背中が丸まりすぎないよう姿勢を保つ。'
+          },
+          {
+            step: 6,
+            name: 'クローズ・スクワット',
+            enName: 'Close Squat',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: '両足のかかととつま先を揃えて立ち、バランスを取りながら深くしゃがみ込み、元の直立姿勢まで立ち上がる。',
+            tip: '足幅が狭くなることでバランスと大腿四頭筋・足首の柔軟性が強く求められる。'
+          },
+          {
+            step: 7,
+            name: 'アンイーブン・スクワット',
+            enName: 'Uneven Squat',
+            goal: { beginner: '10レップス×1（左右各）', intermediate: '15レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片足のすぐ横にバスケットボールや低い台を置き、その上に反対側の足を乗せて深くしゃがみ、立ち上がる。',
+            tip: 'ボールや台側の脚で補助しつつ、主軸となる脚への負荷を徐々に高めていく。'
+          },
+          {
+            step: 8,
+            name: 'ハーフ・ワンレッグ・スクワット',
+            enName: 'Half One-Leg Squat',
+            goal: { beginner: '10レップス×1（左右各）', intermediate: '15レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片脚立ちになり、もう片方の脚を前方に浮かせる。支える脚の膝を約半分まで曲げてしゃがみ、立ち上がる。',
+            tip: '膝が内側に入らないようつま先と同じ向きに動かし、体幹とバランスを安定させる。'
+          },
+          {
+            step: 9,
+            name: 'アシステッド・ワンレッグ・スクワット',
+            enName: 'Assisted One-Leg Squat',
+            goal: { beginner: '10レップス×1（左右各）', intermediate: '15レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片脚を前に伸ばしたままもう片方の脚で深くしゃがみ込み、指先や壁・台などで最小限の補助を得ながら立ち上がる。',
+            tip: 'ボトムポジションでの安定性と立ち上がりの筋力を着実に引き上げる。'
+          },
+          {
+            step: 10,
+            name: 'ワンレッグ・スクワット（ピストル）',
+            enName: 'One-Leg Squat',
+            goal: { beginner: '5レップス×1（左右各）', intermediate: '10レップス×2（左右各）', advanced: '50レップス×2（左右各）' },
+            howTo: '片脚を前方にまっすぐ伸ばしたまま、支える脚のかかとを床につけて深くしゃがみ込み、反動を抑えて立ち上がる。',
+            tip: '柔軟性・筋力・バランスの総合力が必要。無理のない深さから少しずつ可動域を広げる。'
+          }
+        ]
+      },
+      {
+        id: 'pullup',
+        name: 'プルアップ',
+        enName: 'Pull-ups',
+        steps: [
+          {
+            step: 1,
+            name: 'バーティカル・プル',
+            enName: 'Vertical Pull',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '40レップス×3' },
+            howTo: 'ドア枠や柱などの垂直な支えの前に立ち、両手で掴んで体をやや後ろに傾ける。腕と背中を使って胸を支えに引き寄せ、元の位置へ戻る。',
+            tip: '引く筋力と握力・背中の使い方を覚える導入ステップ。足の位置で負荷を微調整する。'
+          },
+          {
+            step: 2,
+            name: 'ホリゾンタル・プル',
+            enName: 'Horizontal Pull',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '30レップス×3' },
+            howTo: '低いバーや頑丈なテーブルの下に仰向けになり、かかとを床につけて体を一直線にする。胸がバーに近づくまで引き上げ、ゆっくり下ろす。',
+            tip: 'お尻が落ちないよう体幹を一直線に保ち、肩甲骨を寄せて背中を引く。'
+          },
+          {
+            step: 3,
+            name: 'ジャックナイフ・プル',
+            enName: 'Jackknife Pull',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×3' },
+            howTo: '低いバーの前に座り、両手でバーを掴み、かかとを床につけたまま膝を曲げる。脚で少し補助しながら顎や胸をバーに近づけるように引き上げる。',
+            tip: '脚の補助を徐々に減らし、上半身の引く力を強めていく。'
+          },
+          {
+            step: 4,
+            name: 'ハーフ・プルアップ',
+            enName: 'Half Pull-up',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: '懸垂バーにぶら下がり、肘が約90度になるまで体を引き上げ、一時静止してからコントロールしながら腕を伸ばす。',
+            tip: '反動を使わず、広背筋と上腕二頭筋でしっかりブレーキをかけながら下ろす。'
+          },
+          {
+            step: 5,
+            name: 'フル・プルアップ',
+            enName: 'Full Pull-up',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: '腕を完全に伸ばしたぶら下がり姿勢からスタートし、顎がバーを超えるまで体を引き上げ、一時静止してから完全に腕を伸ばし切る。',
+            tip: '毎回ボトムで腕を伸ばし切ることと、顎をバーの上まで引き上げることを徹底する。'
+          },
+          {
+            step: 6,
+            name: 'クローズ・プルアップ',
+            enName: 'Close Pull-up',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: 'バーの上で両手を狭く（肩幅より狭く、あるいは手を近づけて）握り、胸上部をバーに近づけるように引き上げて下ろす。',
+            tip: '腕と背中の連動が高まり、手首や肘への負担に注意しながら丁寧に動作する。'
+          },
+          {
+            step: 7,
+            name: 'アンイーブン・プルアップ',
+            enName: 'Uneven Pull-up',
+            goal: { beginner: '10レップス×1（左右各）', intermediate: '15レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片手でバーを握り、もう片方の手で支える腕の手首や前腕などを掴む。支える側の腕をメインに使って引き上げ、下ろす。',
+            tip: '掴む位置を少しずつ手首から離していくことで、片腕への負荷を高められる。'
+          },
+          {
+            step: 8,
+            name: 'ハーフ・ワンアーム・チンアップ',
+            enName: 'Half One-Arm Chin-up',
+            goal: { beginner: '10レップス×1（左右各）', intermediate: '15レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '逆手（アンダーハンド）で片手でバーを掴み、肘が約90度になるまで体を引き上げ、一時静止してからゆっくり下ろす。',
+            tip: '体が回転しないよう体幹を固め、怪我を防ぐため無理な急激な負荷増加を避ける。'
+          },
+          {
+            step: 9,
+            name: 'アシステッド・ワンアーム・チンアップ',
+            enName: 'Assisted One-Arm Chin-up',
+            goal: { beginner: '10レップス×1（左右各）', intermediate: '15レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片手でバーを握り、もう片方の手でタオルや反対の手首などを軽く添えて補助しながら、フル可動域で引き上げて下ろす。',
+            tip: '補助の手にかかる力を少しずつ減らし、単独での引き上げに近づけていく。'
+          },
+          {
+            step: 10,
+            name: 'ワンアーム・プルアップ',
+            enName: 'One-Arm Pull-up',
+            goal: { beginner: '5レップス×1（左右各）', intermediate: '10レップス×2（左右各）', advanced: '20レップス×2（左右各）' },
+            howTo: '片手でバーをしっかりと握り、反動を最小限に抑えて顎がバーを超えるまで体を引き上げ、コントロールしながら下ろす。',
+            tip: '極限の相対筋力と腱・関節の耐久性が求められる最終ステップ。段階的な積み重ねが不可欠。'
+          }
+        ]
+      },
+      {
+        id: 'legraise',
+        name: 'レッグレイズ',
+        enName: 'Leg Raises',
+        steps: [
+          {
+            step: 1,
+            name: 'ニー・タックス',
+            enName: 'Knee Tucks',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '40レップス×3' },
+            howTo: '椅子やベンチの端に座り、体をやや後ろに傾けて手で座面を支える。両膝を揃えたまま胸に引き寄せ、床につかない位置まで伸ばす。',
+            tip: '腹筋の収縮を意識し、脚を勢いよく振り落とさないよう制御する。'
+          },
+          {
+            step: 2,
+            name: 'フラット・ニー・レイズ',
+            enName: 'Flat Knee Raise',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '40レップス×3' },
+            howTo: '床に仰向けになり、手のひらを床につけて体を安定させる。膝を曲げたまま股関節から引き上げ、太ももが垂直になる付近まで上げて下ろす。',
+            tip: '腰が床から浮きすぎないよう腹圧を保ち、かかとを床につけずにコントロールする。'
+          },
+          {
+            step: 3,
+            name: 'フラット・ベント・レッグレイズ',
+            enName: 'Flat Bent Leg Raise',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '40レップス×3' },
+            howTo: '仰向け姿勢から膝を軽めに曲げたまま、脚を床から垂直近くまで持ち上げ、ゆっくりと床すれすれまで下ろす。',
+            tip: '膝の角度を一定に保ちながら、下腹部の力で脚を持ち上げ・下ろす。'
+          },
+          {
+            step: 4,
+            name: 'フラット・フロッグ・レッグレイズ',
+            enName: 'Flat Frog Leg Raise',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '40レップス×3' },
+            howTo: '仰向けになり、膝を外側に開いて足裏を近づけるように曲げながら脚を引き上げ、伸ばしながら下ろす。',
+            tip: '股関節の可動性と腹直筋下部のコントロールを同時に養う。'
+          },
+          {
+            step: 5,
+            name: 'フラット・ストレート・レッグレイズ',
+            enName: 'Flat Straight Leg Raise',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '30レップス×2' },
+            howTo: '仰向けで両脚をできるだけまっすぐ伸ばし、床から垂直（90度）まで持ち上げ、一時静止してからゆっくり下ろす。',
+            tip: '腰が反らないように体幹を引き締め、反動をつけずにスムーズに挙上・下降する。'
+          },
+          {
+            step: 6,
+            name: 'ハンギング・ニー・レイズ',
+            enName: 'Hanging Knee Raise',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: '懸垂バーにぶら下がり、体の揺れを抑えて膝を胸に近づけるように引き上げ、一時静止してからゆっくり下ろす。',
+            tip: '前後に大きくスイングしないよう、体幹を安定させて真っ直ぐ引き上げる。'
+          },
+          {
+            step: 7,
+            name: 'ハンギング・ベント・レッグレイズ',
+            enName: 'Hanging Bent Leg Raise',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: 'バーにぶら下がり、膝を軽く曲げたまま股関節から脚を水平〜それ以上まで引き上げ、コントロールしながら下ろす。',
+            tip: '勢いで蹴り上げず、腹筋群を使って滑らかに引き上げる。'
+          },
+          {
+            step: 8,
+            name: 'ハンギング・フロッグ・レッグレイズ',
+            enName: 'Hanging Frog Leg Raise',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: 'バーにぶら下がり、膝を外に開いて引き上げ、トップで骨盤を少し巻き込むように意識してから下ろす。',
+            tip: '股関節屈曲と体幹の安定性を高いレベルで両立させる。'
+          },
+          {
+            step: 9,
+            name: 'パーシャル・ストレート・レッグレイズ',
+            enName: 'Partial Straight Leg Raise',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: 'バーにぶら下がり、両脚をまっすぐ伸ばしたまま床と平行（約90度）まで引き上げ、一時静止してからゆっくり下ろす。',
+            tip: '膝を伸ばしたままのテコのモーメントは非常に強いため、体幹と肩の安定が重要。'
+          },
+          {
+            step: 10,
+            name: 'ハンギング・ストレート・レッグレイズ',
+            enName: 'Hanging Straight Leg Raise',
+            goal: { beginner: '5レップス×1', intermediate: '10レップス×2', advanced: '30レップス×2' },
+            howTo: 'バーにぶら下がり、両脚をまっすぐ伸ばしたままつま先がバーに近づく（または天井方向へ高く上がる）まで引き上げ、ゆっくり下ろす。',
+            tip: '反動を使わず、腹直筋全体と股関節の柔軟性を活かして最高到達点までコントロールする。'
+          }
+        ]
+      },
+      {
+        id: 'bridge',
+        name: 'ブリッジ',
+        enName: 'Bridges',
+        steps: [
+          {
+            step: 1,
+            name: 'ショート・ブリッジ',
+            enName: 'Short Bridge',
+            goal: { beginner: '10レップス×1', intermediate: '25レップス×2', advanced: '50レップス×3' },
+            howTo: '床に仰向けになり、膝を立ててかかとをお尻に近づけ、両手は体の横に置く。お尻と腰を持ち上げて膝・腰・肩が一直線になるまで押し上げ、下ろす。',
+            tip: '腰を反らしすぎず、臀部とハムストリングス・脊柱起立筋をバランスよく使う。'
+          },
+          {
+            step: 2,
+            name: 'ストレート・ブリッジ',
+            enName: 'Straight Bridge',
+            goal: { beginner: '10レップス×1', intermediate: '20レップス×2', advanced: '40レップス×3' },
+            howTo: '床に仰向けで脚を伸ばし、手のひらで床を押しながら腰・背中を持ち上げて体全体をブリッジ状に反らし、ゆっくり下ろす。',
+            tip: '首に無理な負担をかけないよう、肩と腕・脚で体重を分散して支える。'
+          },
+          {
+            step: 3,
+            name: 'アングルド・ブリッジ',
+            enName: 'Angled Bridge',
+            goal: { beginner: '10レップス×1', intermediate: '15レップス×2', advanced: '30レップス×3' },
+            howTo: '足を前方に伸ばしてかかとを床につけ、手のひらを肩の後ろあたりにつく。股関節と背中を持ち上げて斜めのブリッジ姿勢を作り、下ろす。',
+            tip: '肩関節と手首の柔軟性を高めながら、背面全体の筋力を強化する。'
+          },
+          {
+            step: 4,
+            name: 'ヘッド・ブリッジ',
+            enName: 'Head Bridge',
+            goal: { beginner: '8レップス×1', intermediate: '15レップス×2', advanced: '25レップス×2' },
+            howTo: '床に仰向けになり、かかとを臀部から15〜20cmの位置に引き、手のひらを頭の横の床面に置く（指先はつま先方向）。股関節を押し上げてブリッジ・ホールドの姿勢を作ったあと、頭頂部が床面にやさしく触れるまで腕と脚を曲げる（スタートポジション）。一時静止してから再びブリッジ・ホールド（フィニッシュポジション）へ押し上げる動作を繰り返す。',
+            tip: 'ブリッジ・ホールドができない場合は、体の下に2〜3個の小さなクッションや枕を置いて背中をつけた位置から始め、徐々に頭を床に近づけていく。'
+          },
+          {
+            step: 5,
+            name: 'ハーフ・ブリッジ',
+            enName: 'Half Bridge',
+            goal: { beginner: '8レップス×1', intermediate: '15レップス×2', advanced: '20レップス×2' },
+            howTo: 'バスケットボールやサッカーボール（必要ならタオルを乗せる）で腰のくびれた部分を支えて仰向けになり、手を押して肩と頭を床から浮かせる（スタートポジション）。腕と脚を伸ばして股関節を押し上げ、ボールから離れて背中が完全なアーチを描くフィニッシュポジションで一時静止し、腰がボールに軽く触れる位置までゆっくり下ろして繰り返す（ボールの上で休まない）。',
+            tip: 'フル・ブリッジの動作域の上半分に相当するステップ。レップス数に達しない場合は可動域を小さくして練習し、徐々に広げていく。'
+          },
+          {
+            step: 6,
+            name: 'フル・ブリッジ',
+            enName: 'Full Bridge',
+            goal: { beginner: '6レップス×1', intermediate: '10レップス×2', advanced: '15レップス×2' },
+            howTo: '仰向けになり、かかとを臀部から15〜20cmに引き、手のひらを頭の横の床面に置く（スタートポジション）。股関節をできるだけ高く押し上げ、腕が完全にまっすぐになり後ろの壁が見えるまで両腕の間で頭を後方に傾ける（フィニッシュポジション）。一時静止してからコントロールしながらゆっくり体を下ろし、股関節・背中・頭を床面につけて1レップとする。',
+            tip: '腕と脚を完全に伸ばすには時間がかかるため、最初はできるだけ高さが出るように腕と脚で押し上げる練習を辛抱強く続ける。'
+          },
+          {
+            step: 7,
+            name: 'ウォールウォーキング・ブリッジ（下向き）',
+            enName: 'Wall Walking Bridge (Down)',
+            goal: { beginner: '3レップス×1', intermediate: '6レップス×2', advanced: '10レップス×2' },
+            howTo: '壁から腕の長さ分の距離をとって立ち、股関節を前方に押し出しながら後方に体を曲げ、頭と同じ高さの壁に肩越しに手のひらをつける（指先は下向き：スタートポジション）。片手ずつ交互に壁の上を数センチずつ下へと「歩きながら」体を反らし（必要に応じて足を少し前へ移動）、壁の根元に着いたら床面に手を平らに置いてブリッジ・ホールドする（フィニッシュポジション）。そこから背中を床に下ろして立ち上がり繰り返す。',
+            tip: '手を動かす「歩幅」を小さくすると安全かつ簡単になる。練習するたびに壁のより低い位置まで歩けるようにしていく。'
+          },
+          {
+            step: 8,
+            name: 'ウォールウォーキング・ブリッジ（上向き）',
+            enName: 'Wall Walking Bridge (Up)',
+            goal: { beginner: '2レップス×1', intermediate: '4レップス×2', advanced: '8レップス×2' },
+            howTo: '壁に背を向けて立ち、STEP 7と同様に壁を歩いて下りて壁の前でブリッジ・ホールドする。そこから動作を反転し、床にある片方の手のひらを壁に移して押し、もう片方の手をその上に置いて壁を「歩いて」上っていく（体が起き上がってきたら少しステップバックして壁に近づく）。体がほぼまっすぐになったら壁をやさしく押して完全な直立姿勢に戻り、1レップとする。',
+            tip: '最初から床まで下りるのではなく、歩いて戻れる確信が持てる高さ（チョーク等で印をつけたポイント）まで下りて戻る練習から始め、徐々に距離を伸ばしていく。'
+          },
+          {
+            step: 9,
+            name: 'クロージング・ブリッジ',
+            enName: 'Closing Bridge',
+            goal: { beginner: '1レップ×1', intermediate: '3レップス×2', advanced: '6レップス×2' },
+            howTo: '後ろに少なくとも身長分のスペースがある場所で肩幅に足を開いて直立する。腰に手を置いて骨盤をできるだけ前方に押し出したら、膝を曲げ始めると同時に脊柱を後方へアーチ状にし、後ろの床面が見えたら腰から手を離して肩と頭を越えて後方へ伸ばす。そのまま腕を伸ばし続けて手のひらを静かに床につけ、ブリッジ・ホールド（フィニッシュポジション）を決めたら、背中を床に下ろして立ち上がり繰り返す。',
+            tip: '手のひらをつけた瞬間に背中が落ちてしまう場合は未達成。階段の前で練習し、段を1段ずつ低くしながら最終的に床面で静かにブリッジ・ホールドできるよう練習する。'
+          },
+          {
+            step: 10,
+            name: 'スタンド・トゥ・スタンド・ブリッジ',
+            enName: 'Stand-to-Stand Bridge',
+            goal: { beginner: '1レップ×1', intermediate: '3レップス×2', advanced: '10〜30レップス×2' },
+            howTo: 'まっすぐ立った姿勢からSTEP 9（クロージング・ブリッジ）を行い、ブリッジ・ホールドする。そこから太ももに体重を移し、腕をまっすぐにしながら膝を曲げ、手・最終的には指を使って体重を少しずつ前方へ移動して床面から指を自然に浮かせる。肩越しに手を引き、首を体のライン上に持ち上げ、最後にまっすぐ立つまで股関節を引いて手を体の横に置く（フィニッシュポジション）。立った姿勢からブリッジ・ホールドし、再び直立に戻るまでが1レップ。',
+            tip: 'クロージング・ブリッジと同様に階段を使って少しずつ深さを増やす方法や、最初は足幅を肩幅より広めにとって練習すると習得しやすい。'
+          }
+        ]
+      },
+      {
+        id: 'hspu',
+        name: 'ハンドスタンド・プッシュアップ',
+        enName: 'Handstand Push-ups',
+        steps: [
+          {
+            step: 1,
+            name: 'ウォール・ヘッドスタンド',
+            enName: 'Wall Headstand',
+            goal: { beginner: '30秒', intermediate: '1分', advanced: '2分' },
+            howTo: '壁から15〜25cmの距離にクッションや折り畳んだタオルを置き、頭頂を乗せ、頭の両側に肩幅で手のひらをセットする。強いほうの膝を同じ側の肘に近づけて強く押し下げながらもう一方の脚を蹴り上げて壁を見つけ、ゆっくり脚を伸ばして体を整列させる（口は閉じ鼻で呼吸）。',
+            tip: '壁を見つけるための蹴り上げの強さを覚えるまで、友人に脚の動きをガイドしてもらうと習得しやすい。'
+          },
+          {
+            step: 2,
+            name: 'クロウ・スタンド',
+            enName: 'Crow Stand',
+            goal: { beginner: '10秒', intermediate: '30秒', advanced: '1分' },
+            howTo: '両膝を開いてしゃがみ、肩幅に広げた手のひらを目の前の床につく。前方に体を傾けて肘の外側に膝をしっかり乗せ、少しずつ重心を足から手へと移して足を床から浮かせ、バランスを取りながら安定した呼吸でキープする。',
+            tip: '胸側に倒れ始めたら指で床を強く押し、背側に倒れそうになったら脚をしっかり上げてバランスポイント（手首と指のコントロール）を掴む。'
+          },
+          {
+            step: 3,
+            name: 'ウォール・ハンドスタンド',
+            enName: 'Wall Handstand',
+            goal: { beginner: '30秒', intermediate: '1分', advanced: '2分' },
+            howTo: '壁から15〜25cm離して肩幅に手のひらを平らに置き、腕をほぼまっすぐにする。強いほうの膝を肘に近づけて強く蹴り上げ、腕を伸ばしたまま両足のかかとを同時に壁につけ、体をわずかにアーチを描きつつ腕と整列させてキープする。',
+            tip: '腕を伸ばしたまま強く蹴り上げるニュアンスを掴む。STEP 1を習得していれば逆立ちの感覚自体は身についているためスムーズに移行できる。'
+          },
+          {
+            step: 4,
+            name: 'ハーフ・ハンドスタンド・プッシュアップ',
+            enName: 'Half Handstand Push-up',
+            goal: { beginner: '5レップス×1', intermediate: '10レップス×2', advanced: '20レップス×2' },
+            howTo: '壁から15〜25cm離して肩幅に手のひらを置き、ウォール・ハンドスタンド（STEP 3）に入る（スタートポジション）。そこから頭頂が床面に触れるまでの距離の半分（約15cm）に来るまで肩と肘を曲げ、一時静止してからスタートポジションへ押し戻す。',
+            tip: '最初は下げ過ぎないよう注意し、わずかに腕を曲げる可動域から始めて徐々に床までの半分（約15cm）まで深くしていく。'
+          },
+          {
+            step: 5,
+            name: 'ハンドスタンド・プッシュアップ',
+            enName: 'Handstand Push-up',
+            goal: { beginner: '5レップス×1', intermediate: '10レップス×2', advanced: '15レップス×2' },
+            howTo: '壁から15〜25cm離して肩幅に手のひらを置き、逆立ちしてかかとを壁につけ、腕をまっすぐ伸ばす（スタートポジション）。頭頂が床面と軽く接触するまで肩と肘を曲げ（「キス・ザ・ベイビー」で頭を保護）、1秒間静止してから細心の注意を払って筋肉を制御しながらスタートポジションに押し戻す。',
+            tip: 'ボトムポジションが最も難しいため、最初から頭を床につけず、筋力がつくにつれて徐々に下ろす深さを深めていく。'
+          },
+          {
+            step: 6,
+            name: 'クローズ・ハンドスタンド・プッシュアップ',
+            enName: 'Close Handstand Push-up',
+            goal: { beginner: '5レップス×1', intermediate: '9レップス×2', advanced: '12レップス×2' },
+            howTo: '壁から15〜25cm離して、両手の人差し指同士が触れ合う位置に手のひらを置き、腕をまっすぐにして逆立ちする（スタートポジション）。肘を前方に向かわせながら頭が軽く床面に触れるまで肩と肘を曲げ、全力で体をコントロールしながら一時静止して押し戻す。',
+            tip: '腱を全体重に適応させるため、STEP 5の幅から床に印をつけながら数センチずつ両手の間隔を狭め、最低でも18週間以上かけてじっくり移行する。'
+          },
+          {
+            step: 7,
+            name: 'アンイーブン・ハンドスタンド・プッシュアップ',
+            enName: 'Uneven Handstand Push-up',
+            goal: { beginner: '5レップス×1（片腕ずつ）', intermediate: '8レップス×2（片腕ずつ）', advanced: '10レップス×2（片腕ずつ）' },
+            howTo: '壁のすぐ前にバスケットボールを置き、その隣でハンドスタンド・プッシュアップの姿勢に入り、片方の手を伸ばしてボールの上に手のひらを乗せる（体からボールまで肩幅、床の手はまっすぐ、ボール上の腕は曲がる：スタートポジション）。両腕にできるだけ均等に体重を分散させながら頭が床面にやさしく触れるまで肘と肩を曲げ、一時静止して押し戻す。',
+            tip: '最初は不安定なボールではなく、薄い本を積み重ねてバスケットボールと同じ高さにした安定した台から始め、安全を確保してからボールに移行する。'
+          },
+          {
+            step: 8,
+            name: 'ハーフ・ワンアーム・ハンドスタンド・プッシュアップ',
+            enName: 'Half One-Arm Handstand Push-up',
+            goal: { beginner: '4レップス×1（片腕ずつ）', intermediate: '6レップス×2（片腕ずつ）', advanced: '8レップス×2（片腕ずつ）' },
+            howTo: '壁から15〜25cmの位置で肩幅に手をついて逆立ちし、片方の手のひらから少しずつ力を抜いて反対側に重心を移動させ、力を抜いた手を床から離してバランスをとる（まっすぐ伸ばした片腕で支える：スタートポジション）。支えている腕の肘と手首を曲げ、床面までの距離の半分まで頭を下ろし、一時静止して押し上げる。',
+            tip: '少なくとも6か月以上かけて少しずつ可動域を広げる。指先ではなく手のひら全体で押すように意識すると押す筋肉群がうまく協働する。'
+          },
+          {
+            step: 9,
+            name: 'レバー・ハンドスタンド・プッシュアップ',
+            enName: 'Lever Handstand Push-up',
+            goal: { beginner: '3レップス×1（片腕ずつ）', intermediate: '4レップス×2（片腕ずつ）', advanced: '6レップス×2（片腕ずつ）' },
+            howTo: '壁に向かって逆立ちし、体重の約9割を片方の手のひらに移動したあと、もう片方の手のひらをひっくり返して手の甲を床面に向け、指先を体と反対側に向けて腕を床に触れたまま体の前でまっすぐ伸ばす（スタートポジション）。手のひらを上にした腕を伸ばしながら、支えている腕の肩と肘を曲げて頭頂が床面にやさしく触れるまで下ろし、一時静止して手のひらと手の甲で同時に押して戻る。',
+            tip: '手のひらを上にした腕を曲げて体に近づけると補助が増えて負荷が減るため、最初は曲げた状態から始め、筋力に合わせて徐々に腕を伸ばしていく。'
+          },
+          {
+            step: 10,
+            name: 'ワンアーム・ハンドスタンド・プッシュアップ',
+            enName: 'One-Arm Handstand Push-up',
+            goal: { beginner: '1レップ×1（片腕ずつ）', intermediate: '2レップス×2（片腕ずつ）', advanced: '5レップス×1（片腕ずつ）' },
+            howTo: '壁に向かって逆立ちする。ハーフ・ワンアーム・ハンドスタンド・プッシュアップ（ステップ8）と同じように、片腕で体重を支えられるまで重心を一方の腕にシフトする。かかとを壁につけ、体はゆるやかなアーチを描いてバランスを保つ。これがスタートポジションになる。頭頂が床面にやさしく触れるまで、支えている腕の肘と肩を曲げる。倒れそうになった時の助けにするため、空いているほうの腕を準備する。これがフィニッシュポジションになる。スタートポジションまで押し戻すには、強い力が必要になる。ボトムポジションから抜け出すため、脚を使って弾みをつけてもよい。足を壁につけたまま膝を曲げ、すばやく伸ばして（上方に蹴る）推進力を得る。',
+            tip: '少しずつ深さを増していくようにする。このエクササイズを習得する唯一の方法は、少なくとも3年、あるいはそれ以上をかけて動作を研究することにある。'
+          }
+        ]
+      }
+    ];
+
+    const STORAGE_KEY = 'calisthenics_60_tracker_v2';
+    const WEEKDAY_NAMES = ['日', '月', '火', '水', '木', '金', '土'];
+
+    /**
+     * 日付を YYYY-MM-DD 形式のローカル文字列に変換
+     */
+    function toDateKey(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // アプリケーション状態
+    const state = {
+      activeTabMode: 'today', // 'today' | 'calendar' | 'schedule' | 'library'
+      selectedSeriesId: 'pushup',
+      selectedStep: 1,
+      masteredMap: {}, // key: `${seriesId}_${step}` -> boolean
+      logsMap: {},     // key: `${seriesId}_${step}` -> Array<{ id, date, dateKey?, reps, memo }>
+      // 曜日別担当カテゴリー設定（0:日〜6:土）
+      weekdaySchedule: {
+        0: [], // 日曜：休息日
+        1: ['pushup', 'legraise'], // 月曜
+        2: ['pullup', 'squat'],    // 火曜
+        3: ['bridge', 'hspu'],     // 水曜
+        4: ['pushup', 'legraise'], // 木曜
+        5: ['pullup', 'squat'],    // 金曜
+        6: ['bridge', 'hspu']      // 土曜
+      },
+      calendarYear: new Date().getFullYear(),
+      calendarMonth: new Date().getMonth(),
+      selectedDateKey: toDateKey(new Date()),
+      darkMode: false,
+      timerElapsedMs: 0,
+      timerRunning: false,
+      timerLastTick: null
+    };
+
+    /**
+     * 永続化データの読み込み（旧バージョンからの移行もサポート）
+     */
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('calisthenics_60_tracker_v1');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed.activeTabMode) state.activeTabMode = parsed.activeTabMode;
+        if (parsed.selectedSeriesId) state.selectedSeriesId = parsed.selectedSeriesId;
+        if (typeof parsed.selectedStep === 'number') state.selectedStep = parsed.selectedStep;
+        if (parsed.masteredMap && typeof parsed.masteredMap === 'object') state.masteredMap = parsed.masteredMap;
+        if (parsed.logsMap && typeof parsed.logsMap === 'object') state.logsMap = parsed.logsMap;
+        if (parsed.weekdaySchedule && typeof parsed.weekdaySchedule === 'object') {
+          state.weekdaySchedule = { ...state.weekdaySchedule, ...parsed.weekdaySchedule };
+        }
+        if (typeof parsed.darkMode === 'boolean') state.darkMode = parsed.darkMode;
+      } catch (err) {
+        console.error('状態の読み込みに失敗しました:', err);
+      }
+    }
+
+    /**
+     * 永続化データの保存
+     */
+    function saveState() {
+      try {
+        const payload = {
+          activeTabMode: state.activeTabMode,
+          selectedSeriesId: state.selectedSeriesId,
+          selectedStep: state.selectedStep,
+          masteredMap: state.masteredMap,
+          logsMap: state.logsMap,
+          weekdaySchedule: state.weekdaySchedule,
+          darkMode: state.darkMode
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (err) {
+        console.error('状態の保存に失敗しました:', err);
+      }
+    }
+
+    /**
+     * 指定カテゴリーの現在の最適ステップ（未達成の最小ステップ、全達成ならSTEP 10）を取得
+     */
+    function getOptimalStepForSeries(seriesId) {
+      const series = SERIES_DATA.find((s) => s.id === seriesId) || SERIES_DATA[0];
+      const nextStep = series.steps.find((st) => !state.masteredMap[`${series.id}_${st.step}`]);
+      return nextStep || series.steps[series.steps.length - 1];
+    }
+
+    /**
+     * 選択日付の曜日（0〜6）を取得
+     */
+    function getDayOfWeekFromKey(dateKey) {
+      const [y, m, d] = dateKey.split('-').map(Number);
+      return new Date(y, m - 1, d).getDay();
+    }
+
+    /**
+     * メッセージ通知を表示する（alert代替）
+     */
+    function showMessage(text, isError = false) {
+      const box = document.getElementById('statusMessageBox');
+      if (!box) return;
+      box.textContent = text;
+      box.className = `p-3 rounded-xl text-xs font-semibold ${
+        isError
+          ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800'
+          : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+      }`;
+      box.classList.remove('hidden');
+      clearTimeout(box._timeout);
+      box._timeout = setTimeout(() => {
+        box.classList.add('hidden');
+      }, 2800);
+    }
+
+    /**
+     * テーマ適用
+     */
+    function applyTheme() {
+      const root = document.documentElement;
+      const icon = document.getElementById('themeIcon');
+      if (state.darkMode) {
+        root.classList.add('dark');
+        if (icon) icon.textContent = '☀️';
+      } else {
+        root.classList.remove('dark');
+        if (icon) icon.textContent = '🌙';
+      }
+    }
+
+    /**
+     * 現在のシリーズとステップオブジェクトを取得
+     */
+    function getCurrentSelection() {
+      const series = SERIES_DATA.find((s) => s.id === state.selectedSeriesId) || SERIES_DATA[0];
+      const stepObj = series.steps.find((st) => st.step === state.selectedStep) || series.steps[0];
+      return { series, stepObj };
+    }
+
+    /**
+     * 時間ベース種目（秒数管理）かどうかを判定（HSPU STEP 1〜3）
+     */
+    function isTimeBasedStep(seriesId, stepNum) {
+      return seriesId === 'hspu' && (stepNum === 1 || stepNum === 2 || stepNum === 3);
+    }
+
+    /**
+     * 全体の達成状況を更新
+     */
+    function updateOverallProgress() {
+      const totalSteps = SERIES_DATA.reduce((acc, s) => acc + s.steps.length, 0);
+      const masteredCount = Object.values(state.masteredMap).filter(Boolean).length;
+      const el = document.getElementById('masteredCountText');
+      if (el) el.textContent = String(masteredCount);
+      const badge = document.getElementById('overallProgressBadge');
+      if (badge && masteredCount === totalSteps) {
+        badge.classList.add('ring-2', 'ring-amber-400');
+      }
+    }
+
+    /**
+     * シリーズタブ描画
+     */
+    function renderSeriesTabs() {
+      const container = document.getElementById('seriesTabs');
+      if (!container) return;
+      container.innerHTML = '';
+
+      SERIES_DATA.forEach((series) => {
+        const isActive = series.id === state.selectedSeriesId;
+        const doneInSeries = series.steps.filter((st) => Boolean(state.masteredMap[`${series.id}_${st.step}`])).length;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `shrink-0 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer ${
+          isActive
+            ? 'bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950 shadow-sm'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+        }`;
+        btn.innerHTML = `
+          <span>${series.name}</span>
+          <span class="px-1.5 py-0.5 rounded-md text-[11px] ${
+            isActive
+              ? 'bg-white/20 dark:bg-slate-950/20'
+              : 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+          }">${doneInSeries}/10</span>
+        `;
+        btn.addEventListener('click', () => {
+          state.selectedSeriesId = series.id;
+          state.selectedStep = 1;
+          saveState();
+          renderAll();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    /**
+     * ステップ一覧描画
+     */
+    function renderStepList() {
+      const { series } = getCurrentSelection();
+      const titleEl = document.getElementById('currentSeriesTitle');
+      const progEl = document.getElementById('seriesProgressLabel');
+      const listEl = document.getElementById('stepList');
+
+      if (titleEl) titleEl.textContent = `${series.name}（10ステップ）`;
+      const doneCount = series.steps.filter((st) => Boolean(state.masteredMap[`${series.id}_${st.step}`])).length;
+      if (progEl) progEl.textContent = `${doneCount} / 10 達成`;
+
+      if (!listEl) return;
+      listEl.innerHTML = '';
+
+      series.steps.forEach((st) => {
+        const key = `${series.id}_${st.step}`;
+        const isSelected = st.step === state.selectedStep;
+        const isMastered = Boolean(state.masteredMap[key]);
+        const logs = state.logsMap[key] || [];
+
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.className = `w-full text-left p-3 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer ${
+          isSelected
+            ? 'bg-slate-900 text-white border-slate-900 dark:bg-amber-500 dark:text-slate-950 dark:border-amber-500 shadow-sm'
+            : 'bg-slate-50/70 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 border-slate-200/70 dark:border-slate-700/70 hover:bg-slate-100 dark:hover:bg-slate-800'
+        }`;
+
+        itemBtn.innerHTML = `
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] font-extrabold opacity-75">STEP ${st.step}</span>
+              ${st.step === 10 ? '<span class="text-[10px] font-extrabold px-1.5 py-0.2 rounded bg-amber-400/30">MASTER</span>' : ''}
+            </div>
+            <div class="text-sm font-bold truncate">${st.name}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${logs.length > 0 ? `<span class="text-[11px] px-1.5 py-0.5 rounded-md ${isSelected ? 'bg-white/20 dark:bg-slate-950/20' : 'bg-slate-200 dark:bg-slate-700'}">${logs.length}件</span>` : ''}
+            <span class="text-base">${isMastered ? '✅' : '⬜'}</span>
+          </div>
+        `;
+
+        itemBtn.addEventListener('click', () => {
+          state.selectedStep = st.step;
+          saveState();
+          renderDetailAndLogs();
+          renderStepList();
+        });
+
+        listEl.appendChild(itemBtn);
+      });
+    }
+
+    /**
+     * 選択ステップ詳細とトレーニング記録を描画
+     */
+    function renderDetailAndLogs() {
+      const { series, stepObj } = getCurrentSelection();
+      const key = `${series.id}_${stepObj.step}`;
+      const isMastered = Boolean(state.masteredMap[key]);
+
+      document.getElementById('stepBadge').textContent = `${series.name} ・ STEP ${stepObj.step}`;
+      const masterBadge = document.getElementById('masterBadge');
+      if (stepObj.step === 10) {
+        masterBadge.classList.remove('hidden');
+      } else {
+        masterBadge.classList.add('hidden');
+      }
+
+      const statusBadge = document.getElementById('statusBadge');
+      if (isMastered) {
+        statusBadge.textContent = '達成済み';
+        statusBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300';
+      } else {
+        statusBadge.textContent = '挑戦中 / 未達成';
+        statusBadge.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+      }
+
+      document.getElementById('exerciseName').textContent = stepObj.name;
+      document.getElementById('exerciseEnName').textContent = stepObj.enName;
+
+      document.getElementById('goalBeginner').textContent = stepObj.goal.beginner;
+      document.getElementById('goalIntermediate').textContent = stepObj.goal.intermediate;
+      document.getElementById('goalAdvanced').textContent = stepObj.goal.advanced;
+
+      document.getElementById('exerciseHowTo').textContent = stepObj.howTo;
+      document.getElementById('exerciseTip').textContent = stepObj.tip;
+
+      const toggleBtn = document.getElementById('toggleMasteredBtn');
+      if (isMastered) {
+        toggleBtn.textContent = '✓ 達成済み（解除）';
+        toggleBtn.className = 'py-2.5 px-4 rounded-xl font-bold text-sm border border-emerald-500 bg-emerald-600 text-white hover:bg-emerald-500 transition cursor-pointer';
+      } else {
+        toggleBtn.textContent = 'このステップを達成にする';
+        toggleBtn.className = 'py-2.5 px-4 rounded-xl font-bold text-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer';
+      }
+
+      // 種目タイプに応じて入力フォームのラベルとプレースホルダーを切り替え
+      const isTimed = isTimeBasedStep(series.id, stepObj.step);
+      const primaryLabel = document.getElementById('logPrimaryLabel');
+      const primaryInput = document.getElementById('logPrimaryValue');
+      const secondaryLabel = document.getElementById('logSecondaryLabel');
+      const secondaryInput = document.getElementById('logSecondaryValue');
+
+      if (primaryLabel && primaryInput && secondaryLabel && secondaryInput) {
+        if (isTimed) {
+          primaryLabel.textContent = '秒数（秒）';
+          primaryInput.placeholder = '例: 60';
+          secondaryLabel.textContent = 'レップ数 / セット数';
+          secondaryInput.placeholder = '例: 1';
+        } else {
+          primaryLabel.textContent = 'レップ数（回）';
+          primaryInput.placeholder = '例: 15';
+          secondaryLabel.textContent = 'セット数';
+          secondaryInput.placeholder = '例: 2';
+        }
+      }
+
+      // 記録リスト描画
+      const logs = state.logsMap[key] || [];
+      const countLabel = document.getElementById('logCountLabel');
+      const listEl = document.getElementById('workoutLogsList');
+      if (countLabel) countLabel.textContent = `${logs.length} 件の記録`;
+      if (!listEl) return;
+
+      if (logs.length === 0) {
+        listEl.innerHTML = `<p class="py-6 text-center text-sm text-slate-400">まだこのステップの記録はありません。上のフォームから追加できます。</p>`;
+        return;
+      }
+
+      listEl.innerHTML = '';
+      logs.forEach((entry) => {
+        const displaySummary =
+          entry.reps ||
+          (entry.isTimed
+            ? `${entry.primaryVal}秒 × ${entry.secondaryVal}回`
+            : `${entry.primaryVal}レップス × ${entry.secondaryVal}セット`);
+
+        const row = document.createElement('div');
+        row.className = 'py-3 flex items-start justify-between gap-3';
+        row.innerHTML = `
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-sm font-extrabold text-slate-900 dark:text-white">${escapeHtml(displaySummary)}</span>
+              <span class="text-xs text-slate-400">${escapeHtml(entry.date)}</span>
+            </div>
+            ${entry.memo ? `<p class="text-xs text-slate-600 dark:text-slate-300 mt-1">${escapeHtml(entry.memo)}</p>` : ''}
+          </div>
+          <button
+            type="button"
+            data-log-id="${escapeHtml(entry.id)}"
+            class="delete-log-btn shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+          >
+            削除
+          </button>
+        `;
+        listEl.appendChild(row);
+      });
+
+      listEl.querySelectorAll('.delete-log-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const logId = btn.getAttribute('data-log-id');
+          state.logsMap[key] = (state.logsMap[key] || []).filter((l) => l.id !== logId);
+          saveState();
+          renderDetailAndLogs();
+          renderStepList();
+          showMessage('記録を削除しました。');
+        });
+      });
+    }
+
+    /**
+     * HTMLエスケープヘルパー
+     */
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    /**
+     * タイマー表示の更新
+     */
+    function formatTimer(ms) {
+      const totalTenths = Math.floor(ms / 100);
+      const tenths = totalTenths % 10;
+      const totalSeconds = Math.floor(totalTenths / 10);
+      const seconds = totalSeconds % 60;
+      const minutes = Math.floor(totalSeconds / 60);
+      const mm = String(minutes).padStart(2, '0');
+      const ss = String(seconds).padStart(2, '0');
+      return `${mm}:${ss}.${tenths}`;
+    }
+
+    function updateTimerLoop() {
+      const display = document.getElementById('timerDisplay');
+      if (state.timerRunning && state.timerLastTick !== null) {
+        const now = performance.now();
+        state.timerElapsedMs += now - state.timerLastTick;
+        state.timerLastTick = now;
+      }
+      if (display) {
+        display.textContent = formatTimer(state.timerElapsedMs);
+      }
+      requestAnimationFrame(updateTimerLoop);
+    }
+
+    /**
+     * 全画面描画
+     */
+    function renderAll() {
+      applyTheme();
+      updateViewModeUI();
+      updateOverallProgress();
+      renderCalendar();
+      renderDayOptimalMenu();
+      renderWeekdayConfig();
+      renderSeriesTabs();
+      renderStepList();
+      renderDetailAndLogs();
+    }
+
+    /**
+     * モード表示切替UI更新（'today' | 'calendar' | 'schedule' | 'library'）
+     */
+    function updateViewModeUI() {
+      const todaySec = document.getElementById('todayMenuSection');
+      const calSec = document.getElementById('calendarOnlySection');
+      const schedSec = document.getElementById('weekdayConfigSection');
+      const mainSec = document.getElementById('workoutMainSection');
+      const seriesTabsEl = document.getElementById('seriesTabs');
+      const stepListCard = document.getElementById('stepListCard');
+
+      const todayBtn = document.getElementById('viewTodayBtn');
+      const calBtn = document.getElementById('viewCalendarBtn');
+      const schedBtn = document.getElementById('viewScheduleBtn');
+      const libBtn = document.getElementById('viewLibraryBtn');
+      const banner = document.getElementById('todayRecommendBanner');
+
+      const activeBtnClass = 'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold transition cursor-pointer bg-amber-500 text-slate-950 shadow-sm';
+      const inactiveBtnClass = 'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+
+      if (todayBtn) todayBtn.className = state.activeTabMode === 'today' ? activeBtnClass : inactiveBtnClass;
+      if (calBtn) calBtn.className = state.activeTabMode === 'calendar' ? activeBtnClass : inactiveBtnClass;
+      if (schedBtn) schedBtn.className = state.activeTabMode === 'schedule' ? activeBtnClass : inactiveBtnClass;
+      if (libBtn) libBtn.className = state.activeTabMode === 'library' ? activeBtnClass : inactiveBtnClass;
+
+      // 全セクションを一旦非表示にしてから対象モードのみ表示
+      todaySec?.classList.add('hidden');
+      calSec?.classList.add('hidden');
+      schedSec?.classList.add('hidden');
+      mainSec?.classList.add('hidden');
+      seriesTabsEl?.classList.add('hidden');
+
+      if (state.activeTabMode === 'today') {
+        todaySec?.classList.remove('hidden');
+        mainSec?.classList.remove('hidden');
+        stepListCard?.classList.add('hidden');
+      } else if (state.activeTabMode === 'calendar') {
+        calSec?.classList.remove('hidden');
+      } else if (state.activeTabMode === 'schedule') {
+        schedSec?.classList.remove('hidden');
+      } else if (state.activeTabMode === 'library') {
+        mainSec?.classList.remove('hidden');
+        seriesTabsEl?.classList.remove('hidden');
+        stepListCard?.classList.remove('hidden');
+      }
+
+      if (banner) {
+        const todayDow = new Date().getDay();
+        const todayCats = state.weekdaySchedule[todayDow] || [];
+        if (todayCats.length === 0) {
+          banner.textContent = `本日（${WEEKDAY_NAMES[todayDow]}曜）：休息日`;
+        } else {
+          const names = todayCats
+            .map((cid) => {
+              const s = SERIES_DATA.find((x) => x.id === cid);
+              const opt = getOptimalStepForSeries(cid);
+              return s ? `${s.name}(STEP ${opt.step})` : '';
+            })
+            .filter(Boolean)
+            .join(' / ');
+          banner.textContent = `本日（${WEEKDAY_NAMES[todayDow]}曜）: ${names}`;
+        }
+      }
+    }
+
+    /**
+     * 月間カレンダー描画
+     */
+    function renderCalendar() {
+      const titleEl = document.getElementById('calendarMonthTitle');
+      const gridEl = document.getElementById('calendarGrid');
+      if (!titleEl || !gridEl) return;
+
+      const year = state.calendarYear;
+      const month = state.calendarMonth;
+      titleEl.textContent = `${year}年 ${month + 1}月`;
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const todayKey = toDateKey(new Date());
+
+      // 日付ごとのログ件数を集計
+      const logsByDate = {};
+      Object.values(state.logsMap).forEach((arr) => {
+        if (!Array.isArray(arr)) return;
+        arr.forEach((log) => {
+          if (log.dateKey) {
+            logsByDate[log.dateKey] = (logsByDate[log.dateKey] || 0) + 1;
+          }
+        });
+      });
+
+      gridEl.innerHTML = '';
+
+      // 空白セル
+      for (let i = 0; i < firstDay; i++) {
+        const blank = document.createElement('div');
+        blank.className = 'h-16 sm:h-20 rounded-xl bg-slate-50/40 dark:bg-slate-800/20';
+        gridEl.appendChild(blank);
+      }
+
+      // 各日付セル
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(year, month, day);
+        const dateKey = toDateKey(dateObj);
+        const dow = dateObj.getDay();
+        const cats = state.weekdaySchedule[dow] || [];
+        const isSelected = dateKey === state.selectedDateKey;
+        const isToday = dateKey === todayKey;
+        const logCount = logsByDate[dateKey] || 0;
+
+        const cellBtn = document.createElement('button');
+        cellBtn.type = 'button';
+        cellBtn.className = `h-16 sm:h-20 p-1.5 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer overflow-hidden ${
+          isSelected
+            ? 'bg-slate-900 text-white border-slate-900 dark:bg-amber-500 dark:text-slate-950 dark:border-amber-500 shadow-sm'
+            : isToday
+              ? 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-400 dark:border-amber-600 text-slate-900 dark:text-slate-100'
+              : 'bg-slate-50/80 dark:bg-slate-800/50 border-slate-200/70 dark:border-slate-700/70 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
+        }`;
+
+        const catBadgesHtml =
+          cats.length === 0
+            ? `<span class="text-[10px] opacity-55">休息</span>`
+            : cats
+                .slice(0, 2)
+                .map((cid) => {
+                  const s = SERIES_DATA.find((x) => x.id === cid);
+                  const shortName = s ? s.name.slice(0, 4) : '';
+                  return `<span class="block truncate text-[9px] sm:text-[10px] font-bold px-1 rounded ${
+                    isSelected
+                      ? 'bg-white/20 dark:bg-slate-950/20'
+                      : 'bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
+                  }">${shortName}</span>`;
+                })
+                .join('') + (cats.length > 2 ? `<span class="text-[9px] opacity-75">+${cats.length - 2}</span>` : '');
+
+        cellBtn.innerHTML = `
+          <div class="w-full flex items-center justify-between">
+            <span class="text-xs font-extrabold ${
+              !isSelected && dow === 0 ? 'text-rose-500' : !isSelected && dow === 6 ? 'text-sky-500' : ''
+            }">${day}</span>
+            ${logCount > 0 ? `<span class="w-2 h-2 rounded-full bg-emerald-500" title="記録あり"></span>` : ''}
+          </div>
+          <div class="w-full space-y-0.5">${catBadgesHtml}</div>
+        `;
+
+        cellBtn.addEventListener('click', () => {
+          state.selectedDateKey = dateKey;
+          const dayCats = state.weekdaySchedule[dow] || [];
+          if (dayCats.length > 0) {
+            const firstCat = dayCats[0];
+            const optStep = getOptimalStepForSeries(firstCat);
+            state.selectedSeriesId = firstCat;
+            state.selectedStep = optStep.step;
+          }
+          state.activeTabMode = 'today';
+          saveState();
+          renderAll();
+        });
+
+        gridEl.appendChild(cellBtn);
+      }
+    }
+
+    /**
+     * 選択日の最適ステップメニュー描画
+     */
+    function renderDayOptimalMenu() {
+      const labelEl = document.getElementById('selectedDateLabel');
+      const dowBadge = document.getElementById('selectedDayOfWeekBadge');
+      const resetTodayBtn = document.getElementById('resetToRealTodayBtn');
+      const container = document.getElementById('dayOptimalMenuContainer');
+      if (!labelEl || !dowBadge || !container) return;
+
+      const [y, m, d] = state.selectedDateKey.split('-').map(Number);
+      const dow = getDayOfWeekFromKey(state.selectedDateKey);
+      const isToday = state.selectedDateKey === toDateKey(new Date());
+
+      labelEl.textContent = `${y}年${m}月${d}日${isToday ? '（今日）' : '（選択日の予定）'}`;
+      dowBadge.textContent = `${WEEKDAY_NAMES[dow]}曜日`;
+      if (resetTodayBtn) {
+        if (isToday) {
+          resetTodayBtn.classList.add('hidden');
+        } else {
+          resetTodayBtn.classList.remove('hidden');
+        }
+      }
+
+      const cats = state.weekdaySchedule[dow] || [];
+      if (cats.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 text-center space-y-1">
+            <div class="text-sm font-bold text-slate-700 dark:text-slate-200">🛌 休息日（アクティブレスト）</div>
+            <p class="text-xs text-slate-500 dark:text-slate-400">筋肉と関節・腱の回復日です。下の曜日設定からカテゴリーを追加することもできます。</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = '';
+      cats.forEach((cid) => {
+        const series = SERIES_DATA.find((s) => s.id === cid);
+        if (!series) return;
+        const optStep = getOptimalStepForSeries(cid);
+        const allCleared = series.steps.every((st) => Boolean(state.masteredMap[`${cid}_${st.step}`]));
+        const isCurrentDetail = state.selectedSeriesId === cid && state.selectedStep === optStep.step;
+
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          isCurrentDetail
+            ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-400 dark:border-amber-600'
+            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+        }`;
+
+        card.innerHTML = `
+          <div class="space-y-0.5">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-extrabold px-2 py-0.5 rounded bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950">
+                ${series.name}
+              </span>
+              <span class="text-xs font-bold text-amber-700 dark:text-amber-300">
+                ${allCleared ? '👑 全STEP制覇！' : `最適: STEP ${optStep.step}`}
+              </span>
+            </div>
+            <div class="text-sm font-extrabold text-slate-900 dark:text-white">${optStep.name}</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+              初級: ${optStep.goal.beginner} / 中級: ${optStep.goal.intermediate} / 上級: ${optStep.goal.advanced}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              class="select-optimal-btn px-3 py-2 rounded-xl bg-slate-900 dark:bg-amber-500 text-white dark:text-slate-950 text-xs font-extrabold hover:opacity-90 transition cursor-pointer"
+            >
+              詳細・記録へ
+            </button>
+          </div>
+        `;
+
+        card.querySelector('.select-optimal-btn')?.addEventListener('click', () => {
+          state.selectedSeriesId = cid;
+          state.selectedStep = optStep.step;
+          saveState();
+          renderAll();
+          document.getElementById('exerciseDetailCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    /**
+     * 曜日ごとのカテゴリー設定UI描画
+     */
+    function renderWeekdayConfig() {
+      const listEl = document.getElementById('weekdayConfigList');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+
+      // 月曜(1)〜日曜(0)の順に表示
+      const orderedDows = [1, 2, 3, 4, 5, 6, 0];
+
+      orderedDows.forEach((dow) => {
+        const assigned = state.weekdaySchedule[dow] || [];
+        const row = document.createElement('div');
+        row.className = 'p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70 flex flex-wrap items-center justify-between gap-2';
+
+        const dayBadge = document.createElement('span');
+        dayBadge.className = `w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0 ${
+          dow === 0
+            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+            : dow === 6
+              ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
+              : 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200'
+        }`;
+        dayBadge.textContent = WEEKDAY_NAMES[dow];
+
+        const pillsWrap = document.createElement('div');
+        pillsWrap.className = 'flex-1 flex flex-wrap gap-1';
+
+        SERIES_DATA.forEach((s) => {
+          const active = assigned.includes(s.id);
+          const pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = `px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+            active
+              ? 'bg-slate-900 text-white dark:bg-amber-500 dark:text-slate-950'
+              : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:text-slate-800 dark:hover:text-slate-200'
+          }`;
+          pill.textContent = s.name;
+          pill.addEventListener('click', () => {
+            const current = state.weekdaySchedule[dow] || [];
+            if (current.includes(s.id)) {
+              state.weekdaySchedule[dow] = current.filter((id) => id !== s.id);
+            } else {
+              state.weekdaySchedule[dow] = [...current, s.id];
+            }
+            // 現在選択中の日付の曜日なら最適ステップへ連動
+            if (getDayOfWeekFromKey(state.selectedDateKey) === dow && state.weekdaySchedule[dow].length > 0) {
+              const firstId = state.weekdaySchedule[dow][0];
+              state.selectedSeriesId = firstId;
+              state.selectedStep = getOptimalStepForSeries(firstId).step;
+            }
+            saveState();
+            renderAll();
+          });
+          pillsWrap.appendChild(pill);
+        });
+
+        row.appendChild(dayBadge);
+        row.appendChild(pillsWrap);
+        listEl.appendChild(row);
+      });
+    }
+
+    /**
+     * イベントリスナー登録
+     */
+    function bindEvents() {
+      document.getElementById('viewTodayBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'today';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('viewCalendarBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'calendar';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('jumpToCalendarBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'calendar';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('resetToRealTodayBtn')?.addEventListener('click', () => {
+        const now = new Date();
+        state.calendarYear = now.getFullYear();
+        state.calendarMonth = now.getMonth();
+        state.selectedDateKey = toDateKey(now);
+        const dow = now.getDay();
+        const cats = state.weekdaySchedule[dow] || [];
+        if (cats.length > 0) {
+          state.selectedSeriesId = cats[0];
+          state.selectedStep = getOptimalStepForSeries(cats[0]).step;
+        }
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('viewScheduleBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'schedule';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('jumpToScheduleBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'schedule';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('backToTodayBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'today';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('viewLibraryBtn')?.addEventListener('click', () => {
+        state.activeTabMode = 'library';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('prevMonthBtn')?.addEventListener('click', () => {
+        if (state.calendarMonth === 0) {
+          state.calendarMonth = 11;
+          state.calendarYear -= 1;
+        } else {
+          state.calendarMonth -= 1;
+        }
+        renderCalendar();
+      });
+
+      document.getElementById('nextMonthBtn')?.addEventListener('click', () => {
+        if (state.calendarMonth === 11) {
+          state.calendarMonth = 0;
+          state.calendarYear += 1;
+        } else {
+          state.calendarMonth += 1;
+        }
+        renderCalendar();
+      });
+
+      document.getElementById('todayDateBtn')?.addEventListener('click', () => {
+        const now = new Date();
+        state.calendarYear = now.getFullYear();
+        state.calendarMonth = now.getMonth();
+        state.selectedDateKey = toDateKey(now);
+        const dow = now.getDay();
+        const cats = state.weekdaySchedule[dow] || [];
+        if (cats.length > 0) {
+          state.selectedSeriesId = cats[0];
+          state.selectedStep = getOptimalStepForSeries(cats[0]).step;
+        }
+        state.activeTabMode = 'today';
+        saveState();
+        renderAll();
+      });
+
+      document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+        state.darkMode = !state.darkMode;
+        saveState();
+        applyTheme();
+      });
+
+      document.getElementById('toggleMasteredBtn')?.addEventListener('click', () => {
+        const { series, stepObj } = getCurrentSelection();
+        const key = `${series.id}_${stepObj.step}`;
+        const nextVal = !Boolean(state.masteredMap[key]);
+        state.masteredMap[key] = nextVal;
+
+        // 達成にした場合、同カテゴリーの次の最適ステップへ自動ステップアップ提案＆切替
+        if (nextVal) {
+          const nextOpt = getOptimalStepForSeries(series.id);
+          state.selectedStep = nextOpt.step;
+        }
+
+        saveState();
+        renderAll();
+        if (nextVal) {
+          const nextOpt = getOptimalStepForSeries(series.id);
+          showMessage(
+            nextOpt.step !== stepObj.step
+              ? `${stepObj.name} を達成！次の「STEP ${nextOpt.step}: ${nextOpt.name}」へステップアップしました！`
+              : `${series.name} の全10ステップを制覇しました！`
+          );
+        } else {
+          showMessage(`${stepObj.name} の達成状態を解除しました。`);
+        }
+      });
+
+      document.getElementById('workoutLogForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const primaryInput = document.getElementById('logPrimaryValue');
+        const secondaryInput = document.getElementById('logSecondaryValue');
+        const memoInput = document.getElementById('logMemo');
+
+        const primaryVal = Number(primaryInput?.value);
+        const secondaryVal = Number(secondaryInput?.value);
+        const memo = memoInput?.value.trim() || '';
+
+        const { series, stepObj } = getCurrentSelection();
+        const isTimed = isTimeBasedStep(series.id, stepObj.step);
+
+        if (!Number.isFinite(primaryVal) || primaryVal <= 0 || !Number.isFinite(secondaryVal) || secondaryVal <= 0) {
+          showMessage(
+            isTimed
+              ? '秒数とレップ数を1以上の数字で入力してください。'
+              : 'レップ数とセット数を1以上の数字で入力してください。',
+            true
+          );
+          return;
+        }
+
+        const key = `${series.id}_${stepObj.step}`;
+        if (!Array.isArray(state.logsMap[key])) {
+          state.logsMap[key] = [];
+        }
+
+        const nowStr = new Date().toLocaleString('ja-JP', {
+          month: 'numeric',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const formattedSummary = isTimed
+          ? `${primaryVal}秒 × ${secondaryVal}レップ`
+          : `${primaryVal}レップス × ${secondaryVal}セット`;
+
+        state.logsMap[key].unshift({
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          date: nowStr,
+          dateKey: state.selectedDateKey,
+          isTimed,
+          primaryVal,
+          secondaryVal,
+          reps: formattedSummary,
+          memo
+        });
+
+        saveState();
+        if (primaryInput) primaryInput.value = '';
+        if (secondaryInput) secondaryInput.value = '1';
+        if (memoInput) memoInput.value = '';
+        renderAll();
+        showMessage(`トレーニング記録（${formattedSummary}）を追加しました！`);
+      });
+
+      document.getElementById('timerStartBtn')?.addEventListener('click', () => {
+        if (!state.timerRunning) {
+          state.timerRunning = true;
+          state.timerLastTick = performance.now();
+        }
+      });
+
+      document.getElementById('timerStopBtn')?.addEventListener('click', () => {
+        if (state.timerRunning) {
+          const now = performance.now();
+          state.timerElapsedMs += now - (state.timerLastTick ?? now);
+          state.timerRunning = false;
+          state.timerLastTick = null;
+        }
+      });
+
+      document.getElementById('timerResetBtn')?.addEventListener('click', () => {
+        state.timerRunning = false;
+        state.timerLastTick = null;
+        state.timerElapsedMs = 0;
+        const display = document.getElementById('timerDisplay');
+        if (display) display.textContent = '00:00.0';
+      });
+    }
+
+    // 初期化
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      // 起動時は必ずトップページ（今日のメニュー）かつ本日日付に同期
+      const now = new Date();
+      state.activeTabMode = 'today';
+      state.selectedDateKey = toDateKey(now);
+      state.calendarYear = now.getFullYear();
+      state.calendarMonth = now.getMonth();
+      const todayCats = state.weekdaySchedule[now.getDay()] || [];
+      if (todayCats.length > 0) {
+        state.selectedSeriesId = todayCats[0];
+        state.selectedStep = getOptimalStepForSeries(todayCats[0]).step;
+      }
+      bindEvents();
+      renderAll();
+      requestAnimationFrame(updateTimerLoop);
+    });
+  </script>
+</body>
+</html>
